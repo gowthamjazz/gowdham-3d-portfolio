@@ -1,9 +1,9 @@
 "use client";
 
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Float, Text, ContactShadows } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 function HoloScreen({ position, title, color = "#00ffff" }) {
   const [hovered, setHover] = useState(false);
