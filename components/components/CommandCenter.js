@@ -1,156 +1,69 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { 
-  OrbitControls, 
-  PerspectiveCamera, 
-  Float, 
-  Text, 
-  Html, 
-  MeshTransmissionMaterial 
-} from "@react-three/drei";
+import { OrbitControls, Float, Text, ContactShadows } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import { useRef, useState } from "react";
-import * as THREE from "three";
 
-// 1. The Holographic Globe
-function HoloGlobe() {
-  const mesh = useRef();
-  
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime();
-    mesh.current.rotation.y = t * 0.2; // Rotate
-    mesh.current.position.y = Math.sin(t) * 0.1; // Float
-  });
-
-  return (
-    <group position={[0, 0, 0]}>
-      <mesh ref={mesh}>
-        <sphereGeometry args={[1.5, 64, 64]} />
-        {/* Wireframe Look */}
-        <meshStandardMaterial 
-          color="#00ffff" 
-          emissive="#00ffff"
-          emissiveIntensity={2}
-          wireframe 
-          transparent
-          opacity={0.3}
-        />
-      </mesh>
-      {/* Inner Core */}
-      <mesh>
-        <sphereGeometry args={[1.4, 32, 32]} />
-        <meshBasicMaterial color="#000" />
-      </mesh>
-    </group>
-  );
-}
-
-// 2. Floating Project Screens
-function Screen({ position, rotation, title, color }) {
+function HoloScreen({ position, title, color = "#00ffff" }) {
   const [hovered, setHover] = useState(false);
-  
   return (
     <Float speed={2} rotationIntensity={0.2} floatIntensity={0.5}>
-      <group 
-        position={position} 
-        rotation={rotation}
-        onPointerOver={() => setHover(true)}
-        onPointerOut={() => setHover(false)}
-      >
-        {/* The Frame */}
-        <mesh>
+      <group position={position}>
+        {/* Screen Frame */}
+        <mesh 
+          onPointerOver={() => { setHover(true); document.body.style.cursor = 'pointer'; }}
+          onPointerOut={() => { setHover(false); document.body.style.cursor = 'auto'; }}
+        >
           <boxGeometry args={[3, 2, 0.1]} />
-          <meshStandardMaterial color="#111" roughness={0.2} metalness={0.8} />
+          <meshStandardMaterial color="#222" />
         </mesh>
-        
-        {/* The "Glass" Screen */}
+        {/* Screen Glow */}
         <mesh position={[0, 0, 0.06]}>
           <planeGeometry args={[2.8, 1.8]} />
           <meshStandardMaterial 
-            color="black"
-            emissive={color}
-            emissiveIntensity={hovered ? 2 : 0.5} 
+            color="black" 
+            emissive={color} 
+            emissiveIntensity={hovered ? 3 : 1} // Glow brighter on hover
           />
         </mesh>
-
-        {/* Text */}
-        <Text 
-          position={[0, 0, 0.1]} 
-          fontSize={0.2} 
-          color="white"
-          font="/fonts/Inter-Bold.woff" // Optional: Uses default if not found
-          anchorX="center" 
-          anchorY="middle"
-        >
-          {title.toUpperCase()}
+        <Text position={[0, 0, 0.1]} fontSize={0.25} color="white" anchorX="center" anchorY="middle">
+          {title}
         </Text>
       </group>
     </Float>
   );
 }
 
-// 3. The Main Scene
 export default function CommandCenter() {
   return (
-    <div className="h-screen w-full bg-black">
-      <Canvas gl={{ antialias: false }}>
-        <PerspectiveCamera makeDefault position={[0, 2, 8]} fov={50} />
-        
-        {/* Cinematic Lighting */}
-        <color attach="background" args={['#050505']} />
-        <ambientLight intensity={0.2} />
-        <spotLight position={[10, 10, 10]} angle={0.5} penumbra={1} intensity={1} color="#00ffff" />
-        <pointLight position={[-10, -5, -10]} intensity={2} color="#ff00ff" />
-
-        {/* The Desk Objects */}
-        <group position={[0, -1, 0]}>
-          <HoloGlobe />
-          
-          {/* Screens arranged in a curve */}
-          <Screen position={[-3.5, 1, 1]} rotation={[0, 0.5, 0]} title="Smart Trash" color="#ff00ff" />
-          <Screen position={[0, 2, -1]} rotation={[0, 0, 0]} title="Aqua Drone" color="#00ffff" />
-          <Screen position={[3.5, 1, 1]} rotation={[0, -0.5, 0]} title="Medical App" color="#ffff00" />
-          
-          {/* The "Desk" Surface */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2, 0]}>
-            <planeGeometry args={[20, 20]} />
-            <meshStandardMaterial 
-              color="#111" 
-              metalness={0.8} 
-              roughness={0.1} 
-            />
-          </mesh>
-          <gridHelper args={[20, 20, 0x444444, 0x111111]} position={[0, -1.99, 0]} />
-        </group>
-
-        {/* POST PROCESSING (The "Glow" Effect) */}
-        <EffectComposer disableNormalPass>
-          <Bloom 
-            luminanceThreshold={0.2} // Objects brighter than this will glow
-            mipmapBlur // Smooth blur
-            intensity={1.5} // Strength of glow
-            radius={0.8} // Size of glow
-          />
-          <Vignette eskil={false} offset={0.1} darkness={1.1} />
-        </EffectComposer>
-
-        {/* Controls */}
-        <OrbitControls 
-          enableZoom={false} 
-          enablePan={false} 
-          minPolarAngle={Math.PI / 3} 
-          maxPolarAngle={Math.PI / 2}
-        />
-      </Canvas>
+    <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
+      <color attach="background" args={['#050505']} />
       
-      {/* HTML UI Overlay */}
-      <div className="absolute top-10 left-10 pointer-events-none select-none">
-        <h1 className="text-6xl font-black text-white tracking-tighter" style={{ textShadow: "0 0 20px cyan" }}>
-          GOWDHAM
-        </h1>
-        <p className="text-cyan-400 font-mono tracking-widest mt-2">SYSTEM ONLINE // PORTFOLIO V2</p>
-      </div>
-    </div>
+      <ambientLight intensity={0.5} />
+      <spotLight position={[10, 10, 10]} angle={0.5} penumbra={1} intensity={2} color="#00ffff" />
+
+      <group position={[0, -1, 0]}>
+        {/* Floating Screens */}
+        <HoloScreen position={[0, 1.5, -2]} title="AQUA DRONE" color="#ff00ff" />
+        <HoloScreen position={[-3.5, 0.5, 0]} title="SMART TRASH" color="#00ffff" />
+        <HoloScreen position={[3.5, 0.5, 0]} title="MEDICAL APP" color="#ffff00" />
+        
+        {/* Reflective Floor */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2, 0]}>
+          <planeGeometry args={[20, 20]} />
+          <meshStandardMaterial color="#111" metalness={0.8} roughness={0.2} />
+        </mesh>
+        <ContactShadows resolution={1024} scale={20} blur={2} opacity={0.5} far={10} color="#00ffff" />
+      </group>
+
+      {/* Post Processing Effects (The "Shopify" Look) */}
+      <EffectComposer disableNormalPass>
+        <Bloom luminanceThreshold={0.5} mipmapBlur intensity={2.0} radius={0.6} />
+        <Vignette eskil={false} offset={0.1} darkness={1.0} />
+      </EffectComposer>
+
+      <OrbitControls enablePan={false} maxPolarAngle={Math.PI / 2} minPolarAngle={Math.PI / 3} />
+    </Canvas>
   );
 }
